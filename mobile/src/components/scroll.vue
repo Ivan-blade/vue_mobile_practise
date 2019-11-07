@@ -35,6 +35,7 @@ export default {
       if (!this.$refs.scrollWrapper) return
       this.scroll = new BScroll(this.$refs.scrollWrapper, {
         click: true
+        // 如果不加这个配置在轮播上的点击事件会被屏蔽
       })
     },
     refresh () {

@@ -1,6 +1,6 @@
 <template>
     <ul class="song-list">
-        <li v-for="(item, index) in data" :key="index">
+        <li v-for="(item, index) in data" :key="index" @click="handleClick(item, index)">
             <div>
                 <img v-lazy="`${item.al.picUrl}?param=400y400`" alt="">
             </div>
@@ -25,6 +25,11 @@ export default {
       default () {
         return []
       }
+    }
+  },
+  methods: {
+    handleClick (item, index) {
+      this.$emit('clickItem', item, index)
     }
   }
 }

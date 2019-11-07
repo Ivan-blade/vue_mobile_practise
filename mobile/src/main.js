@@ -1,7 +1,7 @@
 import Vue from 'vue'
 import VueAwesomeSwiper from 'vue-awesome-swiper'
+import 'swiper/dist/css/swiper.min.css'
 import VueLazyLoad from 'vue-lazyload'
-import 'swiper/dist/css/swiper.css'
 import App from './App.vue'
 import router from './router'
 import store from './store/index'

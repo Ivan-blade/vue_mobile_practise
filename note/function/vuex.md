@@ -46,3 +46,41 @@
             import store from './store/index'
         ```
     + 在各个文件中添加方法
+    + 使用参考player,artistsInfo等文件
+        + 一般getters在compute中使用，mutations在method中使用
+            ```
+                import { mapMutations, mapGetters } from 'vuex'
+
+                export default {
+                name: 'artist-info',
+                computed: {
+                    ...mapGetters([
+                    'fullScreen',
+                    'playList',
+                    'currentIndex',
+                    'mode',
+                    'sequencesList',
+                    'currentSong'
+                    ])
+                },
+                methods: {
+                    ...mapMutations([
+                    'SET_FULLSCREEN',
+                    'SET_PLAY_LIST',
+                    'SET_SEQUENCE_LIST',
+                    'SET_CURRENT_INDEX',
+                    'SET_MODE'
+                    ]),
+                    async getInfo (id) {
+                    const { data } = await axios.get(`/api/artists?id=${id}`)
+                    this.formatData = formatSongDetail(data.hotSongs)
+                    },
+                    addToPlay (item, index) {
+                    this.SET_FULLSCREEN(true)
+                    this.SET_PLAY_LIST(this.formatData)
+                    this.SET_SEQUENCE_LIST(this.formatData)
+                    this.SET_CURRENT_INDEX(index)
+                    console.log(this.fullScreen)
+                    }
+                }
+        

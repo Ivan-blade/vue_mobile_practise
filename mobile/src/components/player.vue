@@ -3,32 +3,36 @@
         <div v-show="!fullScreen" class="mini-player">
             <div class="player-info" @click="toggleShow(true)">
                 <div class="player-img">
-                    <img src="" alt="">
+                    <img :src="songImg" alt="">
                 </div>
                 <div>
-                    <p class="player-name">歌曲名称</p>
-                    <p class="player-artists">周杰伦</p>
+                    <p class="player-name">{{songName}}</p>
+                    <p class="player-artists">
+                        <span v-for="(item, index) in songArtists" :key="index">{{item.name}}</span>
+                    </p>
                 </div>
             </div>
             <div class="player-operate">
-                <i class="iconfont icon-zanting icon-op"></i>
+                <i class="iconfont icon-zanting icon-op" @click="togglePlay"></i>
                 <i class="iconfont icon-xiayiqu"></i>
             </div>
             <div class="mini-progress"></div>
         </div>
         <transition name="player">
-            <div v-show="fullScreen" class="player">
+            <div v-show="fullScreen" class="player" :style="{'backgroundImage': `url(${songImg})`}">
                 <div class="player-mask"></div>
                 <div class="player-header">
                     <i class="iconfont icon-xia" @click="toggleShow(false)"></i>
                     <div class="header-info">
-                        <p>歌曲名称</p>
-                        <p class="header-artists">周杰伦</p>
+                        <p>{{songName}}</p>
+                        <p class="header-artists">
+                            <span v-for="(item, index) in songArtists" :key="index">{{item.name}}</span>
+                        </p>
                     </div>
                 </div>
                 <swiper :options="swiperOption">
                     <swiper-slide class="img-container">
-                    <img src="../assets/image/bg-white.png" alt="">
+                    <img :src="songImg" alt="">
                     <i class="iconfont icon-xiai"></i>
                     </swiper-slide>
                     <swiper-slide>
@@ -49,7 +53,7 @@
                     <div class="operate-icon">
                         <i class="iconfont icon-liebiaoxunhuan fs-40"></i>
                         <i class="iconfont icon-shangyiqu fs-80"></i>
-                        <i class="iconfont icon-zanting fs-100"></i>
+                        <i class="iconfont icon-zanting fs-100" @click="togglePlay"></i>
                         <i class="iconfont icon-xiayiqu fs-80"></i>
                         <i class="iconfont icon-more fs-40"></i>
                     </div>
@@ -60,21 +64,86 @@
 </template>
 
 <script>
+import { mapGetters, mapMutations } from 'vuex'
+import axios from 'axios'
 export default {
   name: 'player',
   data () {
     return {
-      fullScreen: true,
       swiperOption: {
         pagination: {
           el: '.swiper-pagination'
         }
+      },
+      musicData: {},
+      lyricData: null,
+      playing: false
+    }
+  },
+  computed: {
+    ...mapGetters([
+      'fullScreen',
+      'playList',
+      'currentIndex',
+      'mode',
+      'sequencesList',
+      'currentSong'
+    ]),
+    songName () {
+      return this.currentSong ? this.currentSong.name : '暂无播放歌曲'
+    },
+    songArtists () {
+      return this.currentSong ? this.currentSong.ar : []
+    },
+    songImg () {
+      return this.currentSong ? `${this.currentSong.al.picUrl}?param=400y400` : ''
+    }
+  },
+  watch: {
+    currentSong (newVal, oldVal) {
+      if (oldVal === undefined || newVal.id !== oldVal.id) {
+        this.getMusicUrl(newVal.id)
+        this.getLyricUrl(newVal.id)
       }
     }
   },
   methods: {
+    ...mapMutations([
+      'SET_FULLSCREEN'
+    ]),
     toggleShow (val) {
-      this.fullScreen = val
+      this.SET_FULLSCREEN(val)
+    },
+    async getMusicUrl (id) {
+      const { data } = await axios.get(`/api/song/url?id=${id}`)
+      if (data.code === 200 && data.data[0].code === 200) {
+        this.musicData = data.data[0]
+        this.$nextTick(() => {
+          this.togglePlay(true)
+        })
+      }
+    },
+    async getLyricUrl (id) {
+      const { data } = await axios.get(`/api/lyric?id=${id}`)
+      if (data.code === 200) {
+        this.lyricData = data.lrc.lyric
+      }
+    },
+    togglePlay (val) {
+      if (!this.currentSong) return
+      if (val === true || val === false) {
+        this.playing = val
+      } else {
+        this.playing = !this.playing
+      }
+      console.log(this.playing)
+      console.log(this.musicData)
+      const audio = this.$refs.audio
+      if (this.playing) {
+        audio.play()
+      } else {
+        audio.pause()
+      }
     }
   }
 }
@@ -93,7 +162,7 @@ export default {
     justify-content: space-between;
     color: white;
     padding: 10px 30px 10px 20px;
-    z-index: 10;
+    z-index: 999;
     .player-info{
         display: flex;
         flex-direction: row;
@@ -145,8 +214,7 @@ export default {
     right: 0;
     left: 0;
     bottom: 0;
-    z-index: 11;
-    background-image: url("../assets/image/user-bg.png");
+    z-index: 999;
     background-size: cover;
     background-position: center center;
     background-repeat: no-repeat;
