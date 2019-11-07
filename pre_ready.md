@@ -21,7 +21,7 @@
         ```
     + flexible安装使用
         ```
-            npm install lib-flexable --save
+            npm install lib-flexible --save
 
             main.js下
             import 'lib-flexible';
