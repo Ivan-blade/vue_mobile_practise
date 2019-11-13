@@ -13,8 +13,8 @@
                 </div>
             </div>
             <div class="player-operate">
-                <i class="iconfont icon-zanting icon-op" @click="togglePlay"></i>
-                <i class="iconfont icon-xiayiqu"></i>
+                <i class="iconfont icon-op" :class="playIcon" @click="togglePlay"></i>
+                <i class="iconfont icon-xiayiqu" @click="next"></i>
             </div>
             <div class="mini-progress"></div>
         </div>
@@ -51,19 +51,21 @@
                         <span class="time">4:00</span>
                     </div>
                     <div class="operate-icon">
-                        <i class="iconfont icon-liebiaoxunhuan fs-40"></i>
-                        <i class="iconfont icon-shangyiqu fs-80"></i>
-                        <i class="iconfont icon-zanting fs-100" @click="togglePlay"></i>
-                        <i class="iconfont icon-xiayiqu fs-80"></i>
+                        <i class="iconfont fs-40" :class="modeIcon" @click="changeMode"></i>
+                        <i class="iconfont icon-shangyiqu fs-80" @click="prev"></i>
+                        <i class="iconfont fs-100" :class="playIcon" @click="togglePlay"></i>
+                        <i class="iconfont icon-xiayiqu fs-80" @click="next"></i>
                         <i class="iconfont icon-more fs-40"></i>
                     </div>
                 </div>
             </div>
         </transition>
+        <audio :src="musicData.url" ref="audio" @ended="end"></audio>
     </div>
 </template>
 
 <script>
+import { playMode } from '../common/js/aliasConfig'
 import { mapGetters, mapMutations } from 'vuex'
 import axios from 'axios'
 export default {
@@ -97,6 +99,12 @@ export default {
     },
     songImg () {
       return this.currentSong ? `${this.currentSong.al.picUrl}?param=400y400` : ''
+    },
+    playIcon () {
+      return this.playing ? 'icon-bofang' : 'icon-zanting'
+    },
+    modeIcon () {
+      return this.mode === playMode.sequence ? 'icon-liebiaoxunhuan' : (this.mode === playMode.loop ? 'icon-danquxunhuan' : 'icon-suiji')
     }
   },
   watch: {
@@ -109,7 +117,10 @@ export default {
   },
   methods: {
     ...mapMutations([
-      'SET_FULLSCREEN'
+      'SET_FULLSCREEN',
+      'SET_CURRENT_INDEX',
+      'SET_MODE',
+      'SET_PLAY_LIST'
     ]),
     toggleShow (val) {
       this.SET_FULLSCREEN(val)
@@ -136,14 +147,65 @@ export default {
       } else {
         this.playing = !this.playing
       }
-      console.log(this.playing)
-      console.log(this.musicData)
+      //  console.log(this.playing)
+      //  console.log(this.musicData)
       const audio = this.$refs.audio
       if (this.playing) {
         audio.play()
       } else {
         audio.pause()
       }
+    },
+    prev () {
+      const len = this.playList.length
+      let newIndex = this.currentIndex - 1
+      if (newIndex < 0) {
+        newIndex = len - 1
+      }
+      this.SET_CURRENT_INDEX(newIndex)
+    },
+    next () {
+      const len = this.playList.length
+      //  console.log(this.playList.length)
+      //  console.log(this.sequencesList.length)
+      let newIndex = this.currentIndex + 1
+      if (newIndex === length) {
+        newIndex = 0
+      }
+      this.SET_CURRENT_INDEX(newIndex)
+    },
+    changeMode () {
+      const modeNumber = (this.mode + 1) % 3
+      this.SET_MODE(modeNumber)
+      let newPlayList = []
+      console.log(this.sequencesList.length)
+      if (this.mode === playMode.random) {
+        newPlayList = this.getRandomList(this.sequencesList)
+      } else {
+        newPlayList = this.sequencesList
+      }
+      //  console.log(newPlayList.length)
+      //  console.log(this.currentSong.id)
+      const newIndex = newPlayList.findIndex(item => item.id === this.currentSong.id)
+      //  console.log(newIndex)
+      this.SET_PLAY_LIST(newPlayList)
+      this.SET_CURRENT_INDEX(newIndex)
+    },
+    getRandomList (arr) {
+      const newArr = [].concat(arr)
+      return newArr.sort((a, b) => (Math.random() > 0.5 ? -1 : 1))
+    },
+    end () {
+      if (this.mode === playMode.loop) {
+        this.loop()
+      } else {
+        this.next()
+      }
+    },
+    loop () {
+      const audio = this.$refs.audio
+      audio.currenTime = 0
+      audio.play()
     }
   }
 }

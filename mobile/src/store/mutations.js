@@ -8,7 +8,7 @@ const mutations = {
     state.playList = val
   },
   SET_SEQUENCE_LIST (state, val) {
-    state.sequenceList = val
+    state.sequencesList = val
   },
   SET_CURRENT_INDEX (state, val) {
     state.currentIndex = val
