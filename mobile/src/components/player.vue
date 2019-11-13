@@ -92,7 +92,7 @@ export default {
       'currentSong'
     ]),
     songName () {
-      return this.currentSong ? this.currentSong.name : '暂无播放歌曲'
+      return this.currentSong ? this.currentSong.al.name : '暂无播放歌曲'
     },
     songArtists () {
       return this.currentSong ? this.currentSong.ar : []
