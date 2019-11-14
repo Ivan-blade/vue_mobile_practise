@@ -16,7 +16,7 @@
                 <i class="iconfont icon-op" :class="playIcon" @click="togglePlay"></i>
                 <i class="iconfont icon-xiayiqu" @click="next"></i>
             </div>
-            <div class="mini-progress"></div>
+            <div class="mini-progress" :style="{width:`${barPercent}`}"></div>
         </div>
         <transition name="player">
             <div v-show="fullScreen" class="player" :style="{'backgroundImage': `url(${songImg})`}">
@@ -35,32 +35,55 @@
                     <img :src="songImg" alt="">
                     <i class="iconfont icon-xiai"></i>
                     </swiper-slide>
-                    <swiper-slide>
-                    歌词
+                    <swiper-slide class="lyric-container">
+                      <v-scroll ref="lyricScroll" class="lyric-scroll">
+                        <div>
+                          <ul v-if="lyricLines.length > 0">
+                            <li ref="lyricLine" class="list-item" :class="{'active': index === currentLineNumber}" v-for="(item, index) in lyricLines" :key="index">
+                              {{item.txt}}
+                            </li>
+                          </ul>
+                          <ul v-else>
+                            暂无歌词
+                          </ul>
+                        </div>
+                      </v-scroll>
                     </swiper-slide>
                     <div class="swiper-pagination" slot="pagination"></div>
                 </swiper>
                 <div class="player-operate">
                     <div class="operate-mask"></div>
                     <div class="progress">
-                        <span class="time">1:11</span>
-                        <div class="progress-bar">
-                            <div class="bar-moved"></div>
-                            <div class="bar-btn"></div>
+                        <span class="time">{{formatTime(currentTime)}}</span>
+                        <div class="progress-bar" ref="progressBar" @click="progressClick">
+                            <div class="bar-moved" :style="{width:`${barPercent}`}"></div>
+                            <div class="bar-btn" :style="{left:`${barPercent}`}" @touchmove.prevent="progressMove" @touchend="progressEnd"></div>
                         </div>
-                        <span class="time">4:00</span>
+                        <span class="time">{{formatTime(overTime)}}</span>
                     </div>
                     <div class="operate-icon">
                         <i class="iconfont fs-40" :class="modeIcon" @click="changeMode"></i>
                         <i class="iconfont icon-shangyiqu fs-80" @click="prev"></i>
                         <i class="iconfont fs-100" :class="playIcon" @click="togglePlay"></i>
                         <i class="iconfont icon-xiayiqu fs-80" @click="next"></i>
-                        <i class="iconfont icon-more fs-40"></i>
+                        <i class="iconfont icon-more fs-40" @click="toggleplayListShow"></i>
                     </div>
                 </div>
             </div>
         </transition>
-        <audio :src="musicData.url" ref="audio" @ended="end"></audio>
+        <div v-if="playlistShow" @click="toggleplayListShow" class="playlist-mask"></div>
+        <transition name="playlist">
+          <v-scroll v-if="playlistShow" class="playlist-scroll">
+            <ul>
+              <li v-for="(item, index) in playList" :key="index" @click="addToPlay(index)">
+                <p>{{item.al.name}} - <span class="artists-name" v-for="(arItem, arIndex) in item.ar" :key="arIndex">{{arItem.name}}</span></p>
+                <i class="iconfont icon-shanchu2"></i>
+              </li>
+            </ul>
+            <div class="close" @click="toggleplayListShow">关闭</div>
+          </v-scroll>
+        </transition>
+        <audio :src="musicData.url" ref="audio" @ended="end" @timeupdate="updateTime"></audio>
     </div>
 </template>
 
@@ -68,6 +91,7 @@
 import { playMode } from '../common/js/aliasConfig'
 import { mapGetters, mapMutations } from 'vuex'
 import axios from 'axios'
+import Scroll from './scroll'
 export default {
   name: 'player',
   data () {
@@ -79,8 +103,17 @@ export default {
       },
       musicData: {},
       lyricData: null,
-      playing: false
+      playing: false,
+      currentTime: 0,
+      overTime: 0,
+      touchBarWillMove: false,
+      lyricLines: [],
+      currentLineNumber: 0,
+      playlistShow: false
     }
+  },
+  components: {
+    'v-scroll': Scroll
   },
   computed: {
     ...mapGetters([
@@ -105,6 +138,14 @@ export default {
     },
     modeIcon () {
       return this.mode === playMode.sequence ? 'icon-liebiaoxunhuan' : (this.mode === playMode.loop ? 'icon-danquxunhuan' : 'icon-suiji')
+    },
+    barPercent () {
+      let p = this.currentTime / this.overTime
+      if (p === 0) {
+        return 0
+      }
+      p = Number(p * 100).toFixed()
+      return `${p}%`
     }
   },
   watch: {
@@ -136,8 +177,11 @@ export default {
     },
     async getLyricUrl (id) {
       const { data } = await axios.get(`/api/lyric?id=${id}`)
-      if (data.code === 200) {
+      if (data.code === 200 && data.lrc) {
         this.lyricData = data.lrc.lyric
+        this.initLines()
+      } else {
+        this.lyricData = null
       }
     },
     togglePlay (val) {
@@ -206,6 +250,99 @@ export default {
       const audio = this.$refs.audio
       audio.currenTime = 0
       audio.play()
+    },
+    updateTime (e) {
+      if (!this.touchBarWillMove) {
+        this.currentTime = e.target.currentTime
+        this.overTime = e.target.duration
+      }
+      if (this.lyricData) {
+        this.moveLyric()
+      }
+    },
+    formatTime (val) {
+      if (isNaN(val)) return '00:00'
+      let m = Math.floor(val / 60)
+      let s = Math.floor(val % 60)
+      if (m < 10) {
+        m = `0${m}`
+      }
+      if (s < 10) {
+        s = `0${s}`
+      }
+      return `${m}:${s}`
+    },
+    progressMove (e) {
+      this.touchBarWillMove = true
+      const pageX = e.touches[0].pageX
+      this.calcPercent(pageX)
+    },
+    progressClick (e) {
+      this.touchBarWillMove = true
+      const pageX = e.pageX
+      this.calcPercent(pageX)
+      this.resetPlayer()
+    },
+    calcPercent (x) {
+      const offsetLeft = this.$refs.progressBar.offsetLeft
+      const barWidth = this.$refs.progressBar.clientWidth
+      let movedWidth = x - offsetLeft
+      if (movedWidth > barWidth) movedWidth = barWidth
+      if (movedWidth < 0) movedWidth = 0
+      let p = movedWidth / barWidth
+      this.currentTime = this.overTime * p
+      this.moveLyric()
+    },
+    progressEnd () {
+      this.resetPlayer()
+    },
+    resetPlayer () {
+      this.$refs.audio.currentTime = this.currentTime
+      this.togglePlay(true)
+      this.touchBarWillMove = false
+    },
+    initLines () {
+      this.lyricLines = []
+      if (this.lyricData) {
+        const lines = this.lyricData.split('\n')
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i]
+          const timeExp = /\[(\d{2}):(\d{2}\.\d{2,3})\]/g
+          const result = timeExp.exec(line)
+          // console.log(result)
+          if (result) {
+            const time = Number(result[1] * 60 * 1000) + Number(result[2] * 1000)
+            const txt = line.replace(timeExp, '').trim()
+            this.lyricLines.push({
+              time,
+              txt
+            })
+          }
+        }
+      }
+    },
+    moveLyric () {
+      this.currentLineNumber = this.findCurrentNumber(this.currentTime * 1000)
+      if (this.currentLineNumber > 6) {
+        this.$refs.lyricScroll.scrollToElement(this.$refs.lyricLine[this.currentLineNumber - 6], 1000)
+      } else {
+        this.$refs.lyricScroll.scrollTo(0, 0, 1000)
+      }
+    },
+    findCurrentNumber (time) {
+      for (let i = 0; i < this.lyricLines.length; i++) {
+        if (time < this.lyricLines[i].time) {
+          return i - 1
+        }
+      }
+      return this.lyricLines.length - 1
+    },
+    toggleplayListShow () {
+      this.playlistShow = !this.playlistShow
+    },
+    addToPlay (index) {
+      this.SET_CURRENT_INDEX(index)
+      this.toggleplayListShow()
     }
   }
 }
@@ -261,7 +398,6 @@ export default {
         }
     }
     .mini-progress{
-        width: 30%;
         height: 6px;
         background-color: #f2353c;
         position: absolute;
@@ -385,11 +521,9 @@ export default {
             top: 0;
             height: 4px;
             background-color: #f2353c;
-            width: 30px;
         }
         .bar-btn{
             position: absolute;
-            left: 30px;
             top: 0;
             width: 20px;
             height: 20px;
@@ -434,5 +568,85 @@ export default {
         transform: translate3d(0, 100px, 0);
         // 由下向上显示
     }
+}
+.lyric-container{
+  height: 100%;
+  box-sizing: border-box;
+  padding: 30px 30px 70px 30px;
+  overflow: hidden;
+}
+.lyric-scroll{
+  height: 100%;
+  width: 100%;
+  color: white;
+  overflow: hidden;
+  text-align: center;
+  .list-item{
+    font-size: 24px;
+    line-height: 1.5;
+    min-height: 50px;
+    opacity: .5;
+    &.active{
+      opacity: 1;
+    }
+  }
+}
+.playlist-scroll{
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 800px;
+  overflow: hidden;
+  z-index: 99999;
+  background-color: rgba(255, 255, 255, 0.95);
+  border-radius: 10px 10px 0 0;
+  ul{
+    padding-bottom: 80px;
+    li{
+      padding: 30px 20px;
+      font-size: 24px;
+      border-bottom: 1PX solid #e6e6e6;
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .artists-name{
+      font-size: 18px;
+      color: #b2b2b2;
+    }
+    i{
+      color: lightgray;
+      font-size: 24px;
+    }
+  }
+}
+.close{
+  line-height: 80px;
+  font-size: 30px;
+  color: #333;
+  text-align: center;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-top: 1PX solid #e6e6e6;
+  background-color: white;
+}
+.playlist-mask{
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 99999;
+  background-color: rgba(0, 0, 0, .4)
+}
+.playlist-enter-active, .playlist-leave-active{
+  transition: all .3s;
+}
+.playlist-enter, .playlist-leave-to{
+  transform: translate3d(0, 100%, 0)
 }
 </style>
