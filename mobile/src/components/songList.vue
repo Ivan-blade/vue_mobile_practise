@@ -5,7 +5,7 @@
                 <img v-lazy="`${item.al.picUrl}?param=400y400`" alt="">
             </div>
             <div>
-                <p>{{item.al.name}}</p>
+                <p>{{item.name}}</p>
                 <p class="artist">
                     <span v-for="(item, index) in item.ar" :key="index">
                         {{item.name}}

@@ -33,7 +33,7 @@
                 <swiper :options="swiperOption">
                     <swiper-slide class="img-container">
                     <img :src="songImg" alt="">
-                    <i class="iconfont icon-xiai"></i>
+                    <i class="iconfont icon-xiai" :class="{'icon-xiai-red':isLove}" @click="addToLove"></i>
                     </swiper-slide>
                     <swiper-slide class="lyric-container">
                       <v-scroll ref="lyricScroll" class="lyric-scroll">
@@ -76,8 +76,9 @@
           <v-scroll v-if="playlistShow" class="playlist-scroll">
             <ul>
               <li v-for="(item, index) in playList" :key="index" @click="addToPlay(index)">
-                <p>{{item.al.name}} - <span class="artists-name" v-for="(arItem, arIndex) in item.ar" :key="arIndex">{{arItem.name}}</span></p>
-                <i class="iconfont icon-shanchu2"></i>
+                <p>{{item.name}} - <span class="artists-name" v-for="(arItem, arIndex) in item.ar" :key="arIndex">{{arItem.name}}</span></p>
+                <i class="iconfont icon-shanchu2" @click.stop="delFromPlayList(item)"></i>
+                <!-- 这边使用stop方法防止冒泡事件，因为i标签的父标签也被添加了一个方法，点击i标签会同时触发两个方法 -->
               </li>
             </ul>
             <div class="close" @click="toggleplayListShow">关闭</div>
@@ -122,7 +123,8 @@ export default {
       'currentIndex',
       'mode',
       'sequencesList',
-      'currentSong'
+      'currentSong',
+      'isLove'
     ]),
     songName () {
       return this.currentSong ? this.currentSong.al.name : '暂无播放歌曲'
@@ -161,7 +163,11 @@ export default {
       'SET_FULLSCREEN',
       'SET_CURRENT_INDEX',
       'SET_MODE',
-      'SET_PLAY_LIST'
+      'SET_PLAY_LIST',
+      'DEL_FROM_PLAY_LIST',
+      'DEL_FROM_LOVE_LIST',
+      'SET_LOVE_LIST',
+      'SET_HISTORY_LIST'
     ]),
     toggleShow (val) {
       this.SET_FULLSCREEN(val)
@@ -172,6 +178,7 @@ export default {
         this.musicData = data.data[0]
         this.$nextTick(() => {
           this.togglePlay(true)
+          this.SET_HISTORY_LIST(this.currentSong)
         })
       }
     },
@@ -343,6 +350,19 @@ export default {
     addToPlay (index) {
       this.SET_CURRENT_INDEX(index)
       this.toggleplayListShow()
+    },
+    delFromPlayList (item) {
+      this.DEL_FROM_PLAY_LIST({
+        'delSong': item,
+        'curSong': this.currentSong
+      })
+    },
+    addToLove () {
+      if (this.isLove) {
+        this.DEL_FROM_LOVE_LIST(this.currentSong)
+      } else {
+        this.SET_LOVE_LIST(this.currentSong)
+      }
     }
   }
 }

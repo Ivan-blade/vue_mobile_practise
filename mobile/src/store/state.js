@@ -9,6 +9,9 @@ const state = {
   // 用于保留切换模式之前的歌单数据
   currentIndex: 0,
   // 用于确定当前播放歌曲的位置
-  mode: playMode.sequence
+  mode: playMode.sequence,
+  historyList: JSON.parse(localStorage.getItem('HistoryList')) || [],
+  loveList: JSON.parse(localStorage.getItem('LoveList')) || [],
+  searchText: JSON.parse(localStorage.getItem('SearchText')) || []
 }
 export default state

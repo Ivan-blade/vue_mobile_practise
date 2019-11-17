@@ -1,9 +1,9 @@
 <template>
   <div>
       <div class="header">
-        <div class="personal">我的</div>
+        <div class="personal" @click="goToUserCenter">我的</div>
         <div>MIKO</div>
-        <i class="iconfont icon-chaxun"></i>
+        <i class="iconfont icon-chaxun" @click="goToSearch"></i>
       </div>
       <div class="swiper-content home-item">
         <swiper :options="swiperOption">
@@ -92,6 +92,11 @@ export default {
     this.getAritist()
   },
   methods: {
+    goToUserCenter () {
+      this.$router.push({
+        name: 'user-center'
+      })
+    },
     async getNewSong () {
       const { data } = await axios.get('/api/personalized/newsong')
       if (data.code === 200) {
@@ -153,6 +158,11 @@ export default {
         params: {
           id: item.id
         }
+      })
+    },
+    goToSearch () {
+      this.$router.push({
+        name: 'search'
       })
     }
   }

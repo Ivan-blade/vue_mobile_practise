@@ -6,18 +6,18 @@
             </m-header>
             <img :src="`${img}?param=400y400`" alt="">
         </div>
-        <div class="count">
-            共有{{count}}首歌曲
-        </div>
+        <v-count>{{count}}</v-count>
     </div>
 </template>
 
 <script>
 import mHeader from '../components/mHeader.vue'
+import Count from '../components/count'
 export default {
   name: 'top',
   components: {
-    'm-header': mHeader
+    'm-header': mHeader,
+    'v-count': Count
   },
   props: {
     title: {
@@ -67,12 +67,5 @@ export default {
             transform: translate3d(-50%, -50%, 0);
             z-index: 1;
         }
-    }
-    .count{
-        height: 80px;
-        line-height: 80px;
-        font-size: 26px;
-        color: #808080;
-        padding-left: 30px;
     }
 </style>

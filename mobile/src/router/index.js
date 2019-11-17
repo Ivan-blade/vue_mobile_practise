@@ -8,6 +8,11 @@ import Recommend from '../views/recommend.vue'
 import ArtistsInfo from '../views/artistsInfo'
 import PlayListInfo from '../views/playListInfo'
 import RankInfo from '../views/rankInfo'
+import Search from '../components/search'
+import userCenter from '../views/userCenter'
+import UserPlayList from '../views/userPlayList'
+import UserHistoryList from '../views/userHistoryList'
+import UserLoveList from '../views/userLoveList'
 
 Vue.use(VueRouter)
 
@@ -55,6 +60,33 @@ const routes = [
             path: ':id',
             name: 'rankInfo',
             component: RankInfo
+          }
+        ]
+      },
+      {
+        path: '/search',
+        name: 'search',
+        component: Search
+      },
+      {
+        path: '/user-center',
+        name: 'user-center',
+        component: userCenter,
+        children: [
+          {
+            path: '/userHistoryList',
+            name: 'userHistoryList',
+            component: UserHistoryList
+          },
+          {
+            path: '/userLoveList',
+            name: 'userLoveList',
+            component: UserLoveList
+          },
+          {
+            path: '/userPlayList',
+            name: 'userPlayList',
+            component: UserPlayList
           }
         ]
       }
